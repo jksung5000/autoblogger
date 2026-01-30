@@ -25,7 +25,18 @@ export interface Artifact {
   // loop/visual hints (MVP)
   running?: boolean;
   loopCount?: number;
+
+  // Eval
   evalScore?: number | null;
+  evalBreakdown?: {
+    structure?: number;
+    specificity?: number;
+    humanizer?: number;
+    medicalLegal?: number;
+    seo?: number;
+  } | null;
+  evalReasons?: string[];
+  evalFixes?: string[];
 }
 
 type StoreShape = {
@@ -132,8 +143,8 @@ export async function createArtifact(input: {
 
 export async function updateArtifact(
   id: string,
-  patch: Partial<Pick<Artifact, "title" | "bodyMarkdown" | "stage" | "running" | "loopCount" | "evalScore">>
-): Promise<Artifact | null> {
+  patch: Partial<Pick<Artifact, "title" | "bodyMarkdown" | "stage" | "running" | "loopCount" | "evalScore" | "evalBreakdown" | "evalReasons" | "evalFixes">>
+): Promise<Artifact | null> { 
   const s = await readStore();
   const art = s.artifacts[id];
   if (!art) return null;
@@ -147,6 +158,9 @@ export async function updateArtifact(
     running: patch.running ?? art.running,
     loopCount: patch.loopCount ?? art.loopCount,
     evalScore: patch.evalScore ?? art.evalScore,
+    evalBreakdown: patch.evalBreakdown ?? art.evalBreakdown,
+    evalReasons: patch.evalReasons ?? art.evalReasons,
+    evalFixes: patch.evalFixes ?? art.evalFixes,
     updatedAt: now,
   };
   await writeStore(s);

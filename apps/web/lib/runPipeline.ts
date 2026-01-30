@@ -1,5 +1,6 @@
 import { getArtifact, updateArtifact } from "./store";
 import { readPipelineSettings } from "./pipelineSettings";
+import { readEvalSettings } from "./evalSettings";
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
@@ -16,6 +17,7 @@ export async function runPipeline(id: string) {
   const settings = await readPipelineSettings();
   const minScore = settings.minScore ?? 70;
   const maxLoops = settings.maxLoops ?? 5;
+  const evalSettings = await readEvalSettings();
 
   const art0 = await getArtifact(id);
   if (!art0) return;
@@ -84,16 +86,56 @@ export async function runPipeline(id: string) {
     // Eval
     const score = scoreForLoop(i);
     finalScore = score;
+
+    const w = evalSettings.weights;
+    const breakdown = {
+      structure: Math.min(w.structure, Math.floor((w.structure * (score / 100)) * 0.9 + Math.random() * (w.structure * 0.2))),
+      specificity: Math.min(w.specificity, Math.floor((w.specificity * (score / 100)) * 0.9 + Math.random() * (w.specificity * 0.2))),
+      humanizer: Math.min(w.humanizer, Math.floor((w.humanizer * (score / 100)) * 0.9 + Math.random() * (w.humanizer * 0.2))),
+      medicalLegal: Math.min(w.medicalLegal, Math.floor((w.medicalLegal * (score / 100)) * 0.9 + Math.random() * (w.medicalLegal * 0.2))),
+      seo: Math.min(w.seo, Math.floor((w.seo * (score / 100)) * 0.9 + Math.random() * (w.seo * 0.2))),
+    };
+
+    const reasons = [
+      score < minScore
+        ? "독자 이득/구체 수치/실천 가이드 중 일부가 더 선명해질 여지가 있음"
+        : "구조(공감→정보→실천)가 안정적이고, 실천 가이드가 명확함",
+      "의학/법무 리스크 문구는 과장 없이 유지 필요",
+    ];
+
+    const fixes = score < minScore
+      ? [
+          "본문 중간에 구체 수치/비유 1개를 추가(예: 워밍업 10~15분, 추위에서 반응이 돌아오는 체감)",
+          "독자 참여 문장 2개 이상 확보(만져보세요/체크해보세요)",
+          "섹션 제목을 더 직관적으로(‘왜 늦어질까/오늘은 어떻게 할까/이런 신호면 중단’)"
+        ]
+      : [
+          "현재 톤 유지 + 반복 문장만 다듬기",
+        ];
+
     await updateArtifact(id, {
       stage: "eval",
       evalScore: score,
+      evalBreakdown: breakdown,
+      evalReasons: reasons,
+      evalFixes: fixes,
       bodyMarkdown:
         `# ${art0.title}\n\n## Eval\n` +
-        `- score: ${score}\n` +
-        `- rule: pass if score >= ${minScore}\n` +
+        `- score: ${score} (pass >= ${minScore})\n\n` +
+        `### breakdown\n` +
+        `- structure: ${breakdown.structure}/${w.structure}\n` +
+        `- specificity: ${breakdown.specificity}/${w.specificity}\n` +
+        `- humanizer: ${breakdown.humanizer}/${w.humanizer}\n` +
+        `- medicalLegal: ${breakdown.medicalLegal}/${w.medicalLegal}\n` +
+        `- seo: ${breakdown.seo}/${w.seo}\n\n` +
+        `### why\n` +
+        reasons.map((r) => `- ${r}`).join("\n") +
+        `\n\n### fixes\n` +
+        fixes.map((f) => `- ${f}`).join("\n") +
+        `\n\n` +
         (score < minScore
-          ? `\n### 결과\n점수 미달 → 보완 후 다시 Topic부터 루프\n`
-          : `\n### 결과\n통과 → Ready로 진행\n`),
+          ? `### 결과\n점수 미달 → 보완 후 다시 Topic부터 루프\n`
+          : `### 결과\n통과 → Ready로 진행\n`),
     });
     await sleep(200);
 

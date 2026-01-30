@@ -34,6 +34,17 @@ export default function SettingsIndex() {
           </Card>
         </Link>
 
+        <Link href="/settings/eval">
+          <Card className="hover:bg-accent/30 transition-colors">
+            <CardHeader>
+              <CardTitle className="text-base">Eval(평가 방법) 설정</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground">
+              항목별 가중치/설명(평가 기준)을 조정합니다.
+            </CardContent>
+          </Card>
+        </Link>
+
         <Link href="/">
           <Card className="hover:bg-accent/30 transition-colors">
             <CardHeader>

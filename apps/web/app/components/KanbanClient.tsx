@@ -43,6 +43,15 @@ type Artifact = {
   running?: boolean;
   loopCount?: number;
   evalScore?: number | null;
+  evalBreakdown?: {
+    structure?: number;
+    specificity?: number;
+    humanizer?: number;
+    medicalLegal?: number;
+    seo?: number;
+  } | null;
+  evalReasons?: string[];
+  evalFixes?: string[];
 };
 
 type SortKey = "updated" | "created" | "title";
@@ -95,7 +104,7 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
   });
 
   const [modal, setModal] = useState<{
-    kind: "artifact" | "prompt";
+    kind: "artifact" | "prompt" | "eval";
     title: string;
     html: string;
   } | null>(null);
@@ -190,6 +199,32 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
       kind: "artifact",
       title: `${a.title}  (${a.stage})`,
       html: marked.parse(a.bodyMarkdown || "") as string,
+    });
+  }
+
+  function openEval(a: Artifact) {
+    const md =
+      `# Eval Report\n\n` +
+      `- score: ${a.evalScore ?? "-"}\n` +
+      (a.evalBreakdown
+        ? `\n## breakdown\n` +
+          `- structure: ${a.evalBreakdown.structure ?? "-"}\n` +
+          `- specificity: ${a.evalBreakdown.specificity ?? "-"}\n` +
+          `- humanizer: ${a.evalBreakdown.humanizer ?? "-"}\n` +
+          `- medicalLegal: ${a.evalBreakdown.medicalLegal ?? "-"}\n` +
+          `- seo: ${a.evalBreakdown.seo ?? "-"}\n`
+        : "") +
+      (a.evalReasons?.length
+        ? `\n## why\n` + a.evalReasons.map((r) => `- ${r}`).join("\n") + "\n"
+        : "") +
+      (a.evalFixes?.length
+        ? `\n## fixes\n` + a.evalFixes.map((f) => `- ${f}`).join("\n") + "\n"
+        : "");
+
+    setModal({
+      kind: "eval",
+      title: `${a.title} (Eval)` ,
+      html: marked.parse(md) as string,
     });
   }
 
@@ -365,6 +400,16 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
                     </div>
 
                     <div className="flex flex-col gap-2 items-end">
+                      {stage === "eval" ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => (window.location.href = "/settings/eval")}
+                          title="평가 방법(가중치/기준) 설정"
+                        >
+                          Eval Settings
+                        </Button>
+                      ) : null}
                       <Button variant="outline" size="sm" onClick={() => openPrompt(stage)}>
                         Prompt
                       </Button>
@@ -423,10 +468,20 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
                           </div>
 
                           <div className="mt-2 flex items-center justify-between">
-                            <div className="text-[11px] text-muted-foreground">
-                              {a.loopCount ? `loop:${a.loopCount}` : ""}
-                              {a.evalScore != null ? ` score:${a.evalScore}` : ""}
-                              {isLooping ? "  ↩︎ to topic" : ""}
+                            <div className="text-[11px] text-muted-foreground flex items-center gap-2">
+                              {a.loopCount ? <span>{`loop:${a.loopCount}`}</span> : null}
+                              {a.evalScore != null ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-6 px-2 text-[11px]"
+                                  onClick={() => openEval(a)}
+                                  title="Eval 상세(항목별 점수/이유/개선)"
+                                >
+                                  score: {a.evalScore}
+                                </Button>
+                              ) : null}
+                              {isLooping ? "↩︎ to topic" : ""}
                             </div>
 
                             <div className="flex gap-2">
