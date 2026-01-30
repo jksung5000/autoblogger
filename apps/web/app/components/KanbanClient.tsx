@@ -195,6 +195,11 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
   }
 
   function openArtifact(a: Artifact) {
+    if (a.stage === "eval") {
+      openEval(a);
+      return;
+    }
+
     setModal({
       kind: "artifact",
       title: `${a.title}  (${a.stage})`,
@@ -484,6 +489,19 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
                               {isLooping ? "↩︎ to topic" : ""}
                             </div>
 
+                            {/* final score quick view */}
+                            {a.stage === "published" && a.evalScore != null ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-6 px-2 text-[11px]"
+                                onClick={() => openEval(a)}
+                                title="최종 Eval 상세"
+                              >
+                                final: {a.evalScore}
+                              </Button>
+                            ) : null}
+
                             <div className="flex gap-2">
                             <Button
                               variant="outline"
@@ -524,7 +542,8 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
             <DialogTitle>{modal?.title}</DialogTitle>
           </DialogHeader>
           <div
-            className="prose max-w-none"
+            className="prose max-w-none break-words [&_*]:break-words"
+            style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
             dangerouslySetInnerHTML={{ __html: modal?.html || "" }}
           />
         </DialogContent>

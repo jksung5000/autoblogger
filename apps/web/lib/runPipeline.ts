@@ -38,49 +38,65 @@ export async function runPipeline(id: string) {
     await sleep(150);
   }
 
-  // Outline
+  // Base manuscript (this evolves; we don't create unrelated content per stage)
+  let manuscript =
+    `# ${art0.title}\n\n` +
+    `오늘처럼 유난히 추운 날, 몸이 코트에서 바로 안 따라오는 날이 있죠.\n` +
+    `특히 하체 웨이트(햄스트링) 다음날이면 ‘첫 스텝’ 반응이 둔한 느낌이 더 커질 수 있어요.\n\n` +
+    `혹시 형님도 이런 날, 겪어보신 적 있으신가요?\n\n` +
+    `## 이 글에서 얻는 것\n` +
+    `- 몸이 늦게 풀리는 날이 생기는 이유(근육통/피로/추위)\n` +
+    `- 테니스에서 컨디션을 안전하게 조절하는 방법\n` +
+    `- 이런 신호면 쉬어야 하는 기준\n\n`;
+
+  // Outline (manuscript + outline section)
   await updateArtifact(id, {
     stage: "outline",
-    bodyMarkdown: `# ${art0.title}\n\n## Outline\n- 도입: 공감 + 질문\n- 중간: 구체 정보(수치/비유 1개)\n- 마무리: 실천 가이드\n`,
+    bodyMarkdown:
+      manuscript +
+      `## Outline\n` +
+      `1) 왜 ‘첫 스텝’이 늦어질까\n` +
+      `2) 하체 웨이트 다음날(특히 햄스트링) 컨디션\n` +
+      `3) 추운 날씨가 워밍업 시간을 늘리는 이유\n` +
+      `4) 오늘은 어떻게 조절할까(실전 루틴)\n` +
+      `5) 이런 신호면 중단/상담\n`,
   });
   await sleep(200);
 
-  // Loop segment
+  // Loop segment (draft -> review -> eval). Draft and review both retain the evolved manuscript.
   for (let i = 0; i < maxLoops; i++) {
     loopCount = i + 1;
 
-    // Draft
-    await updateArtifact(id, {
-      stage: "draft",
-      loopCount,
-      bodyMarkdown:
-        `# ${art0.title}\n\n` +
-        `## 도입\n` +
-        `추운 날, 몸이 바로 안 풀리는 날이 있죠.\n` +
-        `하체 웨이트 다음날이면 더 그럴 수 있어요.\n\n` +
-        `혹시 오늘, 첫 스텝이 늦는 느낌이 있으셨나요?\n\n` +
-        `## 중간(구체 정보)\n` +
-        `워밍업은 ‘몇 분’보다 ‘몸이 언제 반응하느냐’가 기준입니다.\n` +
-        `저는 보통 10~15분을 더 잡습니다.\n\n` +
-        `## 실천 가이드\n` +
-        `- 첫 10~15분은 강도 낮게, 몸의 반응부터 확인\n` +
-        `- 둔하면 게임보다 레슨/패턴 연습 비중을 높이기\n` +
-        `- 날카로운 통증/찌릿함/힘 빠짐이면 중단\n\n` +
-        `---\n\n### 안내\n` +
-        `이 글은 일반 정보입니다. 개인별 원인/진단/치료는 다를 수 있습니다.\n`,
-    });
+    // Draft: expand manuscript
+    manuscript =
+      manuscript +
+      `## 왜 이런 날이 생길까요?\n` +
+      `근육통이 남아있는 날은 ‘아픈 것’만 문제가 아닐 수 있어요.\n` +
+      `반응이 늦습니다.\n\n` +
+      `추운 날씨는 이 시간을 더 길게 만들어요.\n` +
+      `몸이 ‘따뜻해지는 데’ 시간이 걸리니까요.\n\n` +
+      `## 구체적으로(수치/비유)\n` +
+      `저는 이런 날, 워밍업을 보통보다 10~15분 더 잡습니다.\n` +
+      `이게 ‘대충’이 아니라, 반응이 살아나는 시점까지 시간을 확보하는 느낌이에요.\n\n` +
+      `## 오늘은 이렇게 해보세요(3단계)\n` +
+      `1) 지금(집/라커룸): 10~15분 더 데우기(가동성 + 가벼운 점프)\n` +
+      `2) 코트: 게임보다 레슨/패턴 연습 비중을 높이기\n` +
+      `3) 중단 신호: 날카로운 통증/찌릿함/힘 빠짐이 동반되면 멈추기\n\n` +
+      `---\n\n### 안내\n` +
+      `이 글은 일반 정보입니다. 개인별 원인/진단/치료는 다를 수 있습니다.\n`;
+
+    await updateArtifact(id, { stage: "draft", loopCount, bodyMarkdown: manuscript });
     await sleep(250);
 
-    // Review
-    await updateArtifact(id, {
-      stage: "review",
-      bodyMarkdown:
-        `# ${art0.title}\n\n## Review\n` +
-        `- 과장/단정 표현 제거\n` +
-        `- 독자 이득(얻는 것)이 초반에 보이는지\n` +
-        `- 숫자/비유 1개 이상 포함 여부\n` +
-        `- 문장 리듬(짧은 문장) 섞였는지\n`,
-    });
+    // Review: keep the same manuscript + add review comments section (so user sees the evolved 글 + 코멘트)
+    const reviewComments =
+      `\n\n## Review Comments (보완 포인트)\n` +
+      `- 도입에서 ‘얻는 것 3가지’가 더 선명한지 확인\n` +
+      `- 숫자/비유가 1개 이상 들어갔는지 확인\n` +
+      `- 문장 리듬: 짧은 문장 1~2개 더 섞기\n` +
+      `- 과장/단정 표현 제거 + 개인차/상담 안내 유지\n`;
+
+    await updateArtifact(id, { stage: "review", bodyMarkdown: manuscript + reviewComments });
     await sleep(200);
 
     // Eval
@@ -163,29 +179,34 @@ export async function runPipeline(id: string) {
     await sleep(150);
   }
 
-  // Ready
+  // Ready (keep evolved manuscript)
   await updateArtifact(id, {
     stage: "ready",
     bodyMarkdown:
-      `# ${art0.title}\n\n` +
-      `(Ready 후보 — MVP)\n\n` +
+      manuscript +
+      `\n\n---\n` +
       `최종 점수: ${finalScore ?? "-"} (minScore ${minScore}, loops ${Math.min(loopCount, maxLoops)}/${maxLoops})\n`,
   });
   await sleep(150);
 
-  // Naver
+  // Naver (still placeholder, but keep the evolved manuscript visible)
   await updateArtifact(id, {
     stage: "naver",
     bodyMarkdown:
-      `# ${art0.title}\n\n(Naver placeholder)\n- naver_full.html\n- naver_body.html\n- hashtags.txt\n`,
+      manuscript +
+      `\n\n---\n` +
+      `(Naver export 예정)\n- naver_full.html\n- naver_body.html\n- hashtags.txt\n`,
   });
   await sleep(120);
 
-  // Published
+  // Published (final)
   await updateArtifact(id, {
     stage: "published",
     bodyMarkdown:
-      `# ${art0.title}\n\n(Published placeholder)\n\n최종 점수: ${finalScore ?? "-"}\n루프 횟수: ${Math.min(loopCount, maxLoops)}/${maxLoops}\n`,
+      manuscript +
+      `\n\n---\n` +
+      `최종 점수: ${finalScore ?? "-"}\n` +
+      `루프 횟수: ${Math.min(loopCount, maxLoops)}/${maxLoops}\n`,
     running: false,
   });
 }
