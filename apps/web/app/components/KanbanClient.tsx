@@ -14,6 +14,9 @@ import {
 import { Input } from "../../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Separator } from "../../components/ui/separator";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "../../components/ui/sheet";
+import { Switch } from "../../components/ui/switch";
+import { useUiSettings } from "./UiSettings";
 
 type Stage =
   | "topic"
@@ -77,6 +80,7 @@ function stageColor(stage: Stage) {
 }
 
 export default function KanbanClient({ initial }: { initial: Artifact[] }) {
+  const { settings, setSettings } = useUiSettings();
   const [artifacts, setArtifacts] = useState<Artifact[]>(initial);
   const [q, setQ] = useState("");
   const [seed, setSeed] = useState<SeedType | "all">("all");
@@ -194,10 +198,81 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
       <Card>
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => openPrompt("system")}>
                 System Prompt
               </Button>
+
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="sm">UI Settings</Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[360px]">
+                  <SheetHeader>
+                    <SheetTitle>UI Settings</SheetTitle>
+                  </SheetHeader>
+
+                  <div className="mt-6 grid gap-6 text-sm">
+                    <div className="grid gap-2">
+                      <div className="font-medium">Theme</div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-muted-foreground">Dark mode</div>
+                        <Switch
+                          checked={settings.theme === "dark"}
+                          onCheckedChange={(v) =>
+                            setSettings((prev) => ({ ...prev, theme: v ? "dark" : "light" }))
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <div className="font-medium">Column width</div>
+                      <div className="text-muted-foreground">{settings.columnWidth}px</div>
+                      <input
+                        type="range"
+                        min={260}
+                        max={520}
+                        value={settings.columnWidth}
+                        onChange={(e) =>
+                          setSettings((prev) => ({ ...prev, columnWidth: Number(e.target.value) }))
+                        }
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <div className="font-medium">Density</div>
+                      <Select
+                        value={settings.density}
+                        onValueChange={(v) =>
+                          setSettings((prev) => ({ ...prev, density: v as any }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="density" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="comfortable">comfortable</SelectItem>
+                          <SelectItem value="compact">compact</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <div className="font-medium">Reset</div>
+                      <Button
+                        variant="outline"
+                        onClick={() =>
+                          setSettings({ theme: "light", columnWidth: 320, density: "comfortable" })
+                        }
+                      >
+                        Reset to default
+                      </Button>
+                    </div>
+                  </div>
+                </SheetContent>
+              </Sheet>
+
               <div className="text-sm text-muted-foreground">
                 cards: <b className="text-foreground">{filtered.length}</b>
               </div>
@@ -242,7 +317,12 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
         </CardHeader>
       </Card>
 
-      <section className="flex gap-4 overflow-x-auto pb-2" style={{ width: "100%" }}>
+      <section
+        className={`flex gap-4 overflow-x-auto pb-2 ${
+          settings.density === "compact" ? "[&_.col-body]:p-2" : ""
+        }`}
+        style={{ width: "100%" }}
+      >
         {STAGES.map(({ stage, n, title, desc }) => {
           const c = stageColor(stage);
           const isCollapsed = !!collapsed[stage];
@@ -291,9 +371,9 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
               </CardHeader>
 
               {isCollapsed ? (
-                <CardContent className="p-3 text-sm text-muted-foreground">(collapsed)</CardContent>
+                <CardContent className="col-body p-3 text-sm text-muted-foreground">(collapsed)</CardContent>
               ) : (
-                <CardContent className="p-3 space-y-2">
+                <CardContent className="col-body p-3 space-y-2">
                   {cards.length === 0 ? (
                     <p className="text-sm text-neutral-500">비어있음</p>
                   ) : null}

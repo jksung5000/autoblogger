@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import ThemeProvider, { ThemeMode } from "./ThemeProvider";
 
 export type UiSettings = {
@@ -15,6 +21,19 @@ const DEFAULTS: UiSettings = {
   density: "comfortable",
 };
 
+type UiSettingsContextValue = {
+  settings: UiSettings;
+  setSettings: (updater: UiSettings | ((prev: UiSettings) => UiSettings)) => void;
+};
+
+const UiSettingsContext = createContext<UiSettingsContextValue | null>(null);
+
+export function useUiSettings() {
+  const ctx = useContext(UiSettingsContext);
+  if (!ctx) throw new Error("useUiSettings must be used within UiSettingsProvider");
+  return ctx;
+}
+
 export function loadUiSettings(): UiSettings {
   try {
     const raw = localStorage.getItem("ui.settings.v1");
@@ -24,6 +43,8 @@ export function loadUiSettings(): UiSettings {
       ...DEFAULTS,
       ...v,
       columnWidth: Number(v.columnWidth ?? DEFAULTS.columnWidth),
+      density: v.density === "compact" ? "compact" : "comfortable",
+      theme: v.theme === "dark" ? "dark" : "light",
     };
   } catch {
     return DEFAULTS;
@@ -34,8 +55,7 @@ export default function UiSettingsProvider() {
   const [settings, setSettings] = useState<UiSettings>(DEFAULTS);
 
   useEffect(() => {
-    const s = loadUiSettings();
-    setSettings(s);
+    setSettings(loadUiSettings());
   }, []);
 
   useEffect(() => {
@@ -46,22 +66,12 @@ export default function UiSettingsProvider() {
     }
   }, [settings]);
 
+  const value = useMemo(() => ({ settings, setSettings }), [settings]);
+
   return (
-    <>
+    <UiSettingsContext.Provider value={value}>
       <ThemeProvider mode={settings.theme} />
       <style>{`:root { --kanban-col-width: ${settings.columnWidth}px; }`}</style>
-      <UiSettingsEditor settings={settings} setSettings={setSettings} />
-    </>
+    </UiSettingsContext.Provider>
   );
-}
-
-function UiSettingsEditor({
-  settings,
-  setSettings,
-}: {
-  settings: UiSettings;
-  setSettings: (s: UiSettings) => void;
-}) {
-  // This editor is rendered inside the page header (not a separate page yet)
-  return null;
 }
