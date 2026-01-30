@@ -69,7 +69,7 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
   const [sortKey, setSortKey] = useState<SortKey>("updated");
   const [collapsed, setCollapsed] = useState<Record<Stage, boolean>>(() => {
     try {
-      const raw = localStorage.getItem("kanban.collapsed.v2");
+      const raw = localStorage.getItem("kanban.collapsed.v3");
       return raw ? JSON.parse(raw) : {};
     } catch {
       return {};
@@ -96,8 +96,36 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("kanban.collapsed.v2", JSON.stringify(collapsed));
+    localStorage.setItem("kanban.collapsed.v3", JSON.stringify(collapsed));
   }, [collapsed]);
+
+  function isFocusMode(map: Record<Stage, boolean>) {
+    const values = STAGES.map((s) => !!map[s.stage]);
+    const collapsedCount = values.filter(Boolean).length;
+    return collapsedCount > 0 && collapsedCount < values.length;
+  }
+
+  function focusAround(target: Stage) {
+    const idx = STAGES.findIndex((s) => s.stage === target);
+    const keep = new Set<Stage>();
+    if (idx >= 0) {
+      keep.add(STAGES[idx].stage);
+      if (idx - 1 >= 0) keep.add(STAGES[idx - 1].stage);
+      if (idx + 1 < STAGES.length) keep.add(STAGES[idx + 1].stage);
+    } else {
+      keep.add(target);
+    }
+
+    const next: Record<Stage, boolean> = {} as any;
+    for (const s of STAGES) next[s.stage] = !keep.has(s.stage);
+    return next;
+  }
+
+  function expandAll() {
+    const next: Record<Stage, boolean> = {} as any;
+    for (const s of STAGES) next[s.stage] = false;
+    return next;
+  }
 
   const filtered = useMemo(() => {
     const nq = q.trim().toLowerCase();
@@ -217,11 +245,21 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
                     <button
                       className="text-xs px-2 py-1 rounded border bg-white"
                       onClick={() =>
-                        setCollapsed((prev) => ({ ...prev, [stage]: !prev[stage] }))
+                        setCollapsed((prev) => {
+                          // 좌우가 너무 길어서: 현재 컬럼 + 좌/우 컬럼만 남기고 나머지를 접는 "좌우 collapse"(focus) 모드
+                          const focused = isFocusMode(prev);
+                          const allCollapsedOrAllOpen =
+                            STAGES.every((s) => !!prev[s.stage]) ||
+                            STAGES.every((s) => !prev[s.stage]);
+
+                          if (!focused && allCollapsedOrAllOpen) return focusAround(stage);
+                          // 이미 focus 모드면 다시 전체 펼치기
+                          return expandAll();
+                        })
                       }
-                      title="컬럼 접기/펼치기"
+                      title="좌우 collapse: 해당 컬럼과 좌/우만 남기고 접기 (토글)"
                     >
-                      {isCollapsed ? "Expand" : "Collapse"}
+                      Focus
                     </button>
                   </div>
                 </div>
