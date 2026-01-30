@@ -65,14 +65,14 @@ type Artifact = {
 type SortKey = "updated" | "title";
 
 const STAGES: Array<{ stage: Stage; n: number; title: string; desc: string }> = [
-  { stage: "topic", n: 1, title: "Topic", desc: "토픽 카드(개인 기록/블로그 씨앗)" },
-  { stage: "outline", n: 2, title: "Outline", desc: "글 뼈대/섹션 목적" },
-  { stage: "draft", n: 3, title: "Draft", desc: "초안(가독성/리듬)" },
-  { stage: "review", n: 4, title: "Review", desc: "사람 검토/보완 포인트" },
-  { stage: "eval", n: 5, title: "Eval", desc: "점수/리스크 체크(미달 시 loop)" },
-  { stage: "ready", n: 6, title: "Ready", desc: "게시 후보(정리/최종)" },
-  { stage: "naver", n: 7, title: "Naver", desc: "네이버 업로드 패키지" },
-  { stage: "published", n: 8, title: "Published", desc: "발행 기록" },
+  { stage: "topic", n: 1, title: "Topic", desc: "Min: 요약/핵심메시지/아웃라인/체크리스트/태그" },
+  { stage: "outline", n: 2, title: "Outline", desc: "Min: 아웃라인 확정 + 이미지/SEO/내부링크 정책" },
+  { stage: "draft", n: 3, title: "Draft", desc: "Min: 공감+질문 + 숫자 1개 + 실천 + 진료신호 + 안내" },
+  { stage: "review", n: 4, title: "Review", desc: "Min: 과장 제거 + 헷갈림 포인트 + 보완 지시" },
+  { stage: "eval", n: 5, title: "Eval", desc: "Min: 점수 + breakdown + failures/fixes" },
+  { stage: "ready", n: 6, title: "Ready", desc: "Min: 게시 후보 1본(완성본)" },
+  { stage: "naver", n: 7, title: "Naver", desc: "Min: 네이버용 HTML + 해시태그" },
+  { stage: "published", n: 8, title: "Published", desc: "Min: 발행 기록/최종본" },
 ];
 
 function stageColor(stage: Stage) {
