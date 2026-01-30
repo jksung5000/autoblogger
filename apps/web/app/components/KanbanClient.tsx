@@ -13,6 +13,8 @@ type Stage =
   | "naver"
   | "published";
 
+type PromptKey = Stage | "system";
+
 type SeedType = "tennis" | "weights" | "cases" | "custom";
 
 type Artifact = {
@@ -156,12 +158,13 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
     return map;
   }, [filtered]);
 
-  async function openPrompt(stage: Stage) {
-    const res = await fetch(`/api/prompts?stage=${stage}`, { cache: "no-store" });
+  async function openPrompt(key: PromptKey) {
+    const res = await fetch(`/api/prompts?stage=${key}`, { cache: "no-store" });
     const json = await res.json();
+    const label = key === "system" ? "SYSTEM" : key.toUpperCase();
     setModal({
       kind: "prompt",
-      title: `${stage.toUpperCase()} prompt`,
+      title: `${label} prompt`,
       html: marked.parse(String(json.text || "")) as string,
     });
   }
@@ -177,6 +180,15 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            className="text-xs px-3 py-2 rounded border bg-white"
+            onClick={() => openPrompt("system")}
+            title="전역 시스템 프롬프트 보기"
+          >
+            System Prompt
+          </button>
+        </div>
         <div className="flex items-center gap-2">
           <input
             value={q}

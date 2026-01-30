@@ -2,6 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 
 const STAGES = [
+  "system",
   "topic",
   "outline",
   "draft",
