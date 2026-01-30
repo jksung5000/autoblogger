@@ -38,8 +38,11 @@ type Artifact = {
   title: string;
   seedType: SeedType;
   bodyMarkdown: string;
-  createdAt: string;
   updatedAt: string;
+
+  // base linkage
+  baseId: string;
+
   running?: boolean;
   loopCount?: number;
   evalScore?: number | null;
@@ -54,7 +57,7 @@ type Artifact = {
   evalFixes?: string[];
 };
 
-type SortKey = "updated" | "created" | "title";
+type SortKey = "updated" | "title";
 
 const STAGES: Array<{ stage: Stage; n: number; title: string; desc: string }> = [
   { stage: "topic", n: 1, title: "Topic", desc: "토픽 카드(개인 기록/블로그 씨앗)" },
@@ -114,7 +117,7 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
       try {
         const res = await fetch("/api/artifacts", { cache: "no-store" });
         const json = await res.json();
-        setArtifacts(json.artifacts || []);
+        setArtifacts(json.cards || []);
       } catch {
         // ignore
       }
@@ -168,7 +171,6 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
     const sorted = [...list];
     sorted.sort((a, b) => {
       if (sortKey === "title") return a.title.localeCompare(b.title);
-      if (sortKey === "created") return b.createdAt.localeCompare(a.createdAt);
       return b.updatedAt.localeCompare(a.updatedAt);
     });
     return sorted;
@@ -345,7 +347,7 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="updated">sort: updated</SelectItem>
-                  <SelectItem value="created">sort: created</SelectItem>
+                  <SelectItem value="updated">sort: updated</SelectItem>
                   <SelectItem value="title">sort: title</SelectItem>
                 </SelectContent>
               </Select>
@@ -511,7 +513,7 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
                                 await fetch("/api/run", {
                                   method: "POST",
                                   headers: { "content-type": "application/json" },
-                                  body: JSON.stringify({ id: a.id }),
+                                  body: JSON.stringify({ id: a.baseId }),
                                 });
                               }}
                             >
