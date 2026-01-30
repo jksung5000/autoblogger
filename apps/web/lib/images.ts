@@ -9,7 +9,7 @@ export type ImagePlaceholder = {
   slot: string;
 };
 
-const PH_RE = /^\[IMAGE:\s*([^\]]+)\]$/gm;
+const PH_RE = /^\s*(?:[-*]\s*)?\[IMAGE:\s*([^\]]+)\]$/gm;
 
 function parseAttrs(s: string): Record<string, string> {
   const out: Record<string, string> = {};
@@ -36,7 +36,7 @@ export function extractPlaceholders(md: string): ImagePlaceholder[] {
 }
 
 export function hasAnyPlaceholder(md: string) {
-  return /^\[IMAGE:\s*[^\]]+\]$/m.test(md);
+  return /^\s*(?:[-*]\s*)?\[IMAGE:\s*[^\]]+\]$/m.test(md);
 }
 
 export function ensurePlaceholders(md: string, placeholders: ImagePlaceholder[]) {
