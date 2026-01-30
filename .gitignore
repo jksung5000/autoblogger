@@ -7,6 +7,10 @@ node_modules/
 # runtime state (always local)
 var/
 
+# generated content/state (keep local; prompts are versioned separately)
+data/artifacts/
+data/settings/*.json
+
 # app build
 apps/web/.next/
 apps/web/node_modules/

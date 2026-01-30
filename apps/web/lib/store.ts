@@ -99,7 +99,10 @@ async function persistStageFile(art: Artifact) {
   await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(stageFile(art.id, art.stage), art.bodyMarkdown || "", "utf-8");
   // keep a convenient entry point for "개인 기록" usage
-  await fs.writeFile(path.join(dir, "topic.mf.md"), art.bodyMarkdown || "", "utf-8");
+  // only update when we're at topic stage (avoid overwriting with draft/review/etc)
+  if (art.stage === "topic") {
+    await fs.writeFile(path.join(dir, "topic.mf.md"), art.bodyMarkdown || "", "utf-8");
+  }
 }
 
 export async function createArtifact(input: {

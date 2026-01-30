@@ -23,6 +23,17 @@ export default function SettingsIndex() {
           </Card>
         </Link>
 
+        <Link href="/settings/pipeline">
+          <Card className="hover:bg-accent/30 transition-colors">
+            <CardHeader>
+              <CardTitle className="text-base">Pipeline / Eval Loop 설정</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground">
+              Eval 점수 미달 시 loop 최대 횟수/통과 점수를 설정합니다.
+            </CardContent>
+          </Card>
+        </Link>
+
         <Link href="/">
           <Card className="hover:bg-accent/30 transition-colors">
             <CardHeader>

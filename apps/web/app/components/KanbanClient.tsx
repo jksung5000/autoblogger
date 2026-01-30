@@ -430,12 +430,27 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
                             </div>
 
                             <div className="flex gap-2">
-                              <form action={`/artifact/${a.id}`}>
-                                <Button variant="outline" size="sm" title="상세 페이지">
-                                  ↗
-                                </Button>
-                              </form>
-                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              title="Run full pipeline"
+                              onClick={async () => {
+                                await fetch("/api/run", {
+                                  method: "POST",
+                                  headers: { "content-type": "application/json" },
+                                  body: JSON.stringify({ id: a.id }),
+                                });
+                              }}
+                            >
+                              Run
+                            </Button>
+
+                            <form action={`/artifact/${a.id}`}>
+                              <Button variant="outline" size="sm" title="상세 페이지">
+                                ↗
+                              </Button>
+                            </form>
+                          </div>
                           </div>
                         </CardContent>
                       </Card>
