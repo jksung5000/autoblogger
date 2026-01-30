@@ -22,6 +22,9 @@ export interface Artifact {
   createdAt: string;
   updatedAt: string;
 
+  // stage gating scores (0~100), per stage
+  stageScores?: Partial<Record<Stage, number>>;
+
   // loop/visual hints (MVP)
   running?: boolean;
   loopCount?: number;
@@ -143,7 +146,7 @@ export async function createArtifact(input: {
 
 export async function updateArtifact(
   id: string,
-  patch: Partial<Pick<Artifact, "title" | "bodyMarkdown" | "stage" | "running" | "loopCount" | "evalScore" | "evalBreakdown" | "evalReasons" | "evalFixes">>
+  patch: Partial<Pick<Artifact, "title" | "bodyMarkdown" | "stage" | "running" | "loopCount" | "evalScore" | "evalBreakdown" | "evalReasons" | "evalFixes" | "stageScores">>
 ): Promise<Artifact | null> { 
   const s = await readStore();
   const art = s.artifacts[id];
@@ -161,6 +164,7 @@ export async function updateArtifact(
     evalBreakdown: patch.evalBreakdown ?? art.evalBreakdown,
     evalReasons: patch.evalReasons ?? art.evalReasons,
     evalFixes: patch.evalFixes ?? art.evalFixes,
+    stageScores: { ...(art.stageScores || {}), ...(patch.stageScores || {}) },
     updatedAt: now,
   };
   await writeStore(s);

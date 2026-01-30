@@ -10,6 +10,9 @@ import {
 } from "./generate";
 import { exportNaverFromMarkdown } from "./naverExport";
 import { writeExport } from "./artifactFiles";
+import { ensurePlaceholders, fetchImagesForDraft, injectImages, extractPlaceholders } from "./images";
+import { fetchPubmedRefs, formatRefsMarkdown, verifyRefs } from "./pubmed";
+import { appendGateReport, evaluateStage } from "./stageGate";
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
@@ -35,19 +38,35 @@ export async function runPipeline(id: string) {
   let finalScore = art0.evalScore ?? null;
 
   // (Re)generate topic card each run/loop so stage files are always coherent
-  const topicMd = generateTopicCard({
+  let topicMd = generateTopicCard({
     title: art0.title,
     seedType: art0.seedType,
     loopCount: art0.loopCount,
     evalFixes: art0.evalFixes,
   });
-  await updateArtifact(id, { stage: "topic", bodyMarkdown: topicMd, running: true });
-  await sleep(120);
+  {
+    const g = evaluateStage("topic", topicMd);
+    topicMd = appendGateReport(topicMd, "topic", g.score, g.checks);
+    await updateArtifact(id, { stage: "topic", bodyMarkdown: topicMd, running: true, stageScores: { topic: g.score } });
+    await sleep(120);
+    if (g.score < 80) {
+      await updateArtifact(id, { running: false });
+      return;
+    }
+  }
 
   // Outline packet derived from topic
-  const outlineMd = generateOutlinePacket({ title: art0.title, seedType: art0.seedType, topicMd });
-  await updateArtifact(id, { stage: "outline", bodyMarkdown: outlineMd });
-  await sleep(160);
+  let outlineMd = generateOutlinePacket({ title: art0.title, seedType: art0.seedType, topicMd });
+  {
+    const g = evaluateStage("outline", outlineMd);
+    outlineMd = appendGateReport(outlineMd, "outline", g.score, g.checks);
+    await updateArtifact(id, { stage: "outline", bodyMarkdown: outlineMd, stageScores: { outline: g.score } });
+    await sleep(160);
+    if (g.score < 80) {
+      await updateArtifact(id, { running: false });
+      return;
+    }
+  }
 
   // Loop segment (draft -> review -> eval) based on generated artifacts
   let draftMd = "";
@@ -61,12 +80,31 @@ export async function runPipeline(id: string) {
       outlineMd,
     });
 
-    await updateArtifact(id, { stage: "draft", loopCount, bodyMarkdown: draftMd });
-    await sleep(220);
+    // ensure image placeholders from outline exist (step 3 requirement)
+    draftMd = ensurePlaceholders(draftMd, extractPlaceholders(outlineMd));
+
+    {
+      const g = evaluateStage("draft", draftMd);
+      const withGate = appendGateReport(draftMd, "draft", g.score, g.checks);
+      await updateArtifact(id, { stage: "draft", loopCount, bodyMarkdown: withGate, stageScores: { draft: g.score } });
+      await sleep(220);
+      if (g.score < 80) {
+        await updateArtifact(id, { running: false });
+        return;
+      }
+    }
 
     const review = generateReviewComments(draftMd);
-    await updateArtifact(id, { stage: "review", bodyMarkdown: review.reviewMd });
-    await sleep(160);
+    {
+      const g = evaluateStage("review", review.reviewMd);
+      const withGate = appendGateReport(review.reviewMd, "review", g.score, g.checks);
+      await updateArtifact(id, { stage: "review", bodyMarkdown: withGate, stageScores: { review: g.score } });
+      await sleep(160);
+      if (g.score < 80) {
+        await updateArtifact(id, { running: false });
+        return;
+      }
+    }
 
     // Eval (heuristic; deterministic)
     const scored = scoreDraft(draftMd);
@@ -89,13 +127,8 @@ export async function runPipeline(id: string) {
     const fixes = scored.fixes.length
       ? scored.fixes
       : ["반복 표현만 다듬고, 문장 길이(짧은 문장)를 1~2개 더 섞기"];
-    await updateArtifact(id, {
-      stage: "eval",
-      evalScore: score,
-      evalBreakdown: breakdown,
-      evalReasons: reasons,
-      evalFixes: fixes,
-      bodyMarkdown:
+    {
+      const evalMd =
         `# ${art0.title}\n\n## Eval\n` +
         `- score: ${score} (pass >= ${minScore})\n\n` +
         `### breakdown\n` +
@@ -111,9 +144,25 @@ export async function runPipeline(id: string) {
         `\n\n` +
         (score < minScore
           ? `### 결과\n점수 미달 → fixes 반영 후 다시 실행(Topic/Outline은 유지)\n`
-          : `### 결과\n통과 → Ready로 진행\n`),
-    });
-    await sleep(160);
+          : `### 결과\n통과 → Ready로 진행\n`);
+
+      const g = evaluateStage("eval", evalMd);
+      const withGate = appendGateReport(evalMd, "eval", g.score, g.checks);
+      await updateArtifact(id, {
+        stage: "eval",
+        evalScore: score,
+        evalBreakdown: breakdown,
+        evalReasons: reasons,
+        evalFixes: fixes,
+        bodyMarkdown: withGate,
+        stageScores: { eval: g.score },
+      });
+      await sleep(160);
+      if (g.score < 80) {
+        await updateArtifact(id, { running: false });
+        return;
+      }
+    }
 
     if (score >= minScore) break;
 
@@ -141,18 +190,45 @@ export async function runPipeline(id: string) {
     await sleep(150);
   }
 
-  // Ready (final draft candidate)
-  await updateArtifact(id, {
-    stage: "ready",
-    bodyMarkdown:
-      draftMd +
-      `\n\n---\n` +
-      `최종 점수: ${finalScore ?? "-"} (minScore ${minScore}, loops ${Math.min(loopCount, maxLoops)}/${maxLoops})\n`,
-  });
-  await sleep(150);
+  // Ready (final draft candidate) — now with images + references
+  // 1) Fetch images and inject (step 3)
+  const img = await fetchImagesForDraft({ baseId: id, draftMd });
+  let readyMd = injectImages(
+    draftMd,
+    img.downloaded.map((d) => ({ file: d.file, license: d.license }))
+  );
+
+  // 2) PubMed references (step 4)
+  const refs = await fetchPubmedRefs({ seedType: art0.seedType, topicHint: art0.title, limit: 3 });
+  readyMd = readyMd + formatRefsMarkdown(refs);
+  const refQa = verifyRefs({ topic: art0.title, refs });
+
+  // 3) Gate score for ready (step 6)
+  {
+    const g = evaluateStage("ready", readyMd);
+    const extraChecks = refQa.failures.map((f, i) => ({ key: `refqa_${i}`, label: f, pass: false }));
+    const checks = refQa.ok ? g.checks : [...g.checks, ...extraChecks];
+    const score = refQa.ok ? g.score : Math.min(g.score, 79);
+
+    readyMd = appendGateReport(readyMd, "ready", score, checks);
+    await updateArtifact(id, {
+      stage: "ready",
+      bodyMarkdown:
+        readyMd +
+        `\n\n---\n` +
+        `최종 점수: ${finalScore ?? "-"} (minScore ${minScore}, loops ${Math.min(loopCount, maxLoops)}/${maxLoops})\n`,
+      stageScores: { ready: score },
+    });
+    await sleep(150);
+
+    if (score < 80) {
+      await updateArtifact(id, { running: false });
+      return;
+    }
+  }
 
   // Naver export (generate real files)
-  const naver = exportNaverFromMarkdown({ markdown: draftMd, title: art0.title });
+  const naver = exportNaverFromMarkdown({ markdown: readyMd, title: art0.title });
   await writeExport(id, "naver_full.html", naver.fullHtml);
   await writeExport(id, "naver_body.html", naver.bodyHtml);
   await writeExport(id, "hashtags.txt", naver.hashtags + "\n");
@@ -160,20 +236,26 @@ export async function runPipeline(id: string) {
   await updateArtifact(id, {
     stage: "naver",
     bodyMarkdown:
-      draftMd +
+      readyMd +
       `\n\n---\n` +
       `(Naver export 생성됨)\n- exports/naver_full.html\n- exports/naver_body.html\n- exports/hashtags.txt\n`,
   });
   await sleep(120);
 
   // Published (final)
-  await updateArtifact(id, {
-    stage: "published",
-    bodyMarkdown:
-      draftMd +
-      `\n\n---\n` +
-      `최종 점수: ${finalScore ?? "-"}\n` +
-      `루프 횟수: ${Math.min(loopCount, maxLoops)}/${maxLoops}\n`,
-    running: false,
-  });
+  {
+    const g = evaluateStage("published", readyMd);
+    const publishedMd = appendGateReport(readyMd, "published", g.score, g.checks);
+    await updateArtifact(id, {
+      stage: "published",
+      bodyMarkdown:
+        publishedMd +
+        `\n\n---\n` +
+        `최종 점수: ${finalScore ?? "-"}\n` +
+        `루프 횟수: ${Math.min(loopCount, maxLoops)}/${maxLoops}\n`,
+      running: false,
+      stageScores: { published: g.score },
+    });
+  }
 }
+

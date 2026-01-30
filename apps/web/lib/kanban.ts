@@ -25,6 +25,9 @@ export type KanbanCard = {
   evalBreakdown?: Artifact["evalBreakdown"];
   evalReasons?: string[];
   evalFixes?: string[];
+
+  // gating
+  stageScore?: number | null;
 };
 
 const STAGES: Stage[] = [
@@ -105,12 +108,16 @@ export async function artifactToStageCards(art: Artifact): Promise<KanbanCard[]>
     if (!md) continue;
 
     const label = stageLabel(stage);
+    const stageScore = art.stageScores?.[stage] ?? null;
+
     const extra =
       stage === "eval" && art.evalScore != null
         ? ` · score ${art.evalScore}`
         : stage === "draft" && art.loopCount
           ? ` · v${art.loopCount}`
-          : "";
+          : stageScore != null
+            ? ` · ${stageScore}`
+            : "";
 
     const snippetRaw = firstMeaningfulLine(md);
     const snippet = snippetRaw.length > 120 ? snippetRaw.slice(0, 120) + "…" : snippetRaw;
@@ -131,6 +138,7 @@ export async function artifactToStageCards(art: Artifact): Promise<KanbanCard[]>
       evalBreakdown: art.evalBreakdown,
       evalReasons: art.evalReasons,
       evalFixes: art.evalFixes,
+      stageScore,
     });
   }
 
