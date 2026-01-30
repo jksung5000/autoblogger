@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { marked } from "marked";
 import { Button } from "../../components/ui/button";
+import { MarkdownModal } from "./MarkdownModal";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import {
@@ -114,7 +115,7 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
   const [modal, setModal] = useState<{
     kind: "artifact" | "prompt" | "eval";
     title: string;
-    html: string;
+    markdown: string;
   } | null>(null);
 
   useEffect(() => {
@@ -197,7 +198,7 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
     setModal({
       kind: "prompt",
       title: `${label} prompt`,
-      html: marked.parse(String(json.text || "")) as string,
+      markdown: String(json.text || ""),
     });
   }
 
@@ -210,7 +211,7 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
     setModal({
       kind: "artifact",
       title: `${a.baseTitle}  (${a.stage})`,
-      html: marked.parse(a.bodyMarkdown || "") as string,
+      markdown: a.bodyMarkdown || "",
     });
   }
 
@@ -236,7 +237,7 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
     setModal({
       kind: "eval",
       title: `${a.baseTitle} (Eval)` ,
-      html: marked.parse(md) as string,
+      markdown: md,
     });
   }
 
@@ -543,18 +544,14 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
         })}
       </section>
 
-      <Dialog open={!!modal} onOpenChange={(open) => (!open ? setModal(null) : null)}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
-          <DialogHeader>
-            <DialogTitle>{modal?.title}</DialogTitle>
-          </DialogHeader>
-          <div
-            className="prose max-w-none break-words [&_*]:break-words"
-            style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
-            dangerouslySetInnerHTML={{ __html: modal?.html || "" }}
-          />
-        </DialogContent>
-      </Dialog>
+      {modal ? (
+        <MarkdownModal
+          open={!!modal}
+          onOpenChange={(open) => !open && setModal(null)}
+          title={modal.title}
+          markdown={modal.markdown}
+        />
+      ) : null}
 
       <div className="text-xs text-neutral-500">
         ※ loop/실시간 표현은 MVP 단계에서 “폴링 기반”으로 구현 중입니다(1초마다 상태 갱신).
