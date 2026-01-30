@@ -328,51 +328,70 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
           const isCollapsed = !!collapsed[stage];
           const cards = grouped.get(stage) || [];
 
+          const colWidth = isCollapsed ? 56 : undefined;
+
           return (
             <Card
               key={stage}
-              className={`${c.border}`}
-              style={{ minWidth: "var(--kanban-col-width)", maxWidth: "var(--kanban-col-width)" }}
+              className={`${c.border} ${isCollapsed ? "overflow-hidden" : ""}`}
+              style={
+                isCollapsed
+                  ? { minWidth: colWidth, maxWidth: colWidth }
+                  : { minWidth: "var(--kanban-col-width)", maxWidth: "var(--kanban-col-width)" }
+              }
             >
-              <CardHeader className={`border-b ${c.head} ${c.border} space-y-2`}>
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="text-xs text-muted-foreground">Step {n}</div>
-                    <CardTitle className="text-base">
-                      {title} <span className="text-xs text-muted-foreground">({cards.length})</span>
-                    </CardTitle>
-                    <p className="text-xs text-muted-foreground mt-1">{desc}</p>
-                  </div>
-
-                  <div className="flex flex-col gap-2 items-end">
-                    <Button variant="outline" size="sm" onClick={() => openPrompt(stage)}>
-                      Prompt
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setCollapsed((prev) => {
-                          const focused = isFocusMode(prev);
-                          const allCollapsedOrAllOpen =
-                            STAGES.every((s) => !!prev[s.stage]) ||
-                            STAGES.every((s) => !prev[s.stage]);
-
-                          if (!focused && allCollapsedOrAllOpen) return focusAround(stage);
-                          return expandAll();
-                        })
-                      }
-                      title="좌우 collapse: 해당 컬럼과 좌/우만 남기고 접기 (토글)"
+              <CardHeader className={`border-b ${c.head} ${c.border} ${isCollapsed ? "p-2" : "space-y-2"}`}>
+                {isCollapsed ? (
+                  <button
+                    className="w-full h-[260px] flex items-center justify-center"
+                    onClick={() => setCollapsed((prev) => ({ ...prev, [stage]: false }))}
+                    title="펼치기"
+                  >
+                    <div
+                      className="text-xs font-semibold tracking-wide text-muted-foreground"
+                      style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
                     >
-                      Focus
-                    </Button>
+                      {`Step ${n} · ${title}`}
+                    </div>
+                  </button>
+                ) : (
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="text-xs text-muted-foreground">Step {n}</div>
+                      <CardTitle className="text-base">
+                        {title} <span className="text-xs text-muted-foreground">({cards.length})</span>
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground mt-1">{desc}</p>
+                    </div>
+
+                    <div className="flex flex-col gap-2 items-end">
+                      <Button variant="outline" size="sm" onClick={() => openPrompt(stage)}>
+                        Prompt
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setCollapsed((prev) => {
+                            const focused = isFocusMode(prev);
+                            const allCollapsedOrAllOpen =
+                              STAGES.every((s) => !!prev[s.stage]) ||
+                              STAGES.every((s) => !prev[s.stage]);
+
+                            if (!focused && allCollapsedOrAllOpen) return focusAround(stage);
+                            return expandAll();
+                          })
+                        }
+                        title="좌우 collapse: 해당 컬럼과 좌/우만 남기고 접기 (토글)"
+                      >
+                        Focus
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                )}
               </CardHeader>
 
-              {isCollapsed ? (
-                <CardContent className="col-body p-3 text-sm text-muted-foreground">(collapsed)</CardContent>
-              ) : (
+              {isCollapsed ? null : (
                 <CardContent className="col-body p-3 space-y-2">
                   {cards.length === 0 ? (
                     <p className="text-sm text-neutral-500">비어있음</p>
