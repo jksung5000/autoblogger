@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { listArtifacts } from "../lib/store";
+import { artifactToStageCards } from "../lib/kanban";
 import KanbanClient from "./components/KanbanClient";
 
 export default async function Home() {
   const artifacts = await listArtifacts();
+  const cards = (await Promise.all(artifacts.map(artifactToStageCards))).flat();
 
   return (
     <main className="p-6 space-y-6 bg-zinc-50 min-h-screen">
@@ -22,7 +24,7 @@ export default async function Home() {
         </div>
       </header>
 
-      <KanbanClient initial={artifacts as any} />
+      <KanbanClient initial={cards as any} />
     </main>
   );
 }

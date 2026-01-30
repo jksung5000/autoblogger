@@ -8,6 +8,8 @@ import {
   generateTopicCard,
   scoreDraft,
 } from "./generate";
+import { exportNaverFromMarkdown } from "./naverExport";
+import { writeExport } from "./artifactFiles";
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
@@ -149,13 +151,18 @@ export async function runPipeline(id: string) {
   });
   await sleep(150);
 
-  // Naver (placeholder for now)
+  // Naver export (generate real files)
+  const naver = exportNaverFromMarkdown({ markdown: draftMd, title: art0.title });
+  await writeExport(id, "naver_full.html", naver.fullHtml);
+  await writeExport(id, "naver_body.html", naver.bodyHtml);
+  await writeExport(id, "hashtags.txt", naver.hashtags + "\n");
+
   await updateArtifact(id, {
     stage: "naver",
     bodyMarkdown:
       draftMd +
       `\n\n---\n` +
-      `(Naver export 예정)\n- naver_full.html\n- naver_body.html\n- hashtags.txt\n`,
+      `(Naver export 생성됨)\n- exports/naver_full.html\n- exports/naver_body.html\n- exports/hashtags.txt\n`,
   });
   await sleep(120);
 

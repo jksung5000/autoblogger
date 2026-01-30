@@ -353,7 +353,6 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="updated">sort: updated</SelectItem>
-                  <SelectItem value="updated">sort: updated</SelectItem>
                   <SelectItem value="title">sort: title</SelectItem>
                 </SelectContent>
               </Select>
@@ -526,8 +525,8 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
                               Run
                             </Button>
 
-                            <form action={`/artifact/${a.id}`}>
-                              <Button variant="outline" size="sm" title="상세 페이지">
+                            <form action={`/flow/${a.baseId}`}>
+                              <Button variant="outline" size="sm" title="Flow 보기">
                                 ↗
                               </Button>
                             </form>

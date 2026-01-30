@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { getArtifact } from "../../../lib/store";
-import { actionAdvanceStage, actionUpdateArtifact } from "../../../app/actions";
+import { readStageMarkdown } from "../../../lib/artifactFiles";
+
+function parseId(id: string) {
+  const m = String(id).split(":");
+  if (m.length >= 2) {
+    return { baseId: m[0], stage: m[1] };
+  }
+  return { baseId: id, stage: null as string | null };
+}
 
 export default async function ArtifactPage({
   params,
@@ -8,6 +16,39 @@ export default async function ArtifactPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const parsed = parseId(id);
+
+  // stage-card view (baseId:stage) — read from saved stage markdown
+  if (parsed.stage) {
+    const stage = parsed.stage as any;
+    const md = await readStageMarkdown(parsed.baseId, stage);
+
+    return (
+      <main className="p-6 space-y-6 bg-zinc-50 min-h-screen">
+        <header className="flex items-start justify-between gap-4">
+          <div>
+            <Link className="underline" href="/">
+              ← Kanban
+            </Link>
+            <h1 className="text-2xl font-semibold mt-2">{parsed.baseId}</h1>
+            <p className="text-sm text-neutral-600">stage: <b>{stage}</b></p>
+          </div>
+          <div className="flex gap-3 text-sm">
+            <Link className="underline" href={`/flow/${parsed.baseId}`}>Flow</Link>
+            {(stage === "ready" || stage === "naver" || stage === "published") ? (
+              <Link className="underline" href={`/preview/${parsed.baseId}?stage=${stage}`}>Preview</Link>
+            ) : null}
+          </div>
+        </header>
+
+        <section className="rounded-xl border bg-white shadow-sm p-4">
+          <pre className="whitespace-pre-wrap break-words text-sm">{md}</pre>
+        </section>
+      </main>
+    );
+  }
+
+  // base artifact edit view (legacy)
   const art = await getArtifact(id);
 
   if (!art) {
@@ -34,40 +75,14 @@ export default async function ArtifactPage({
           </p>
         </div>
 
-        <form action={actionAdvanceStage}>
-          <input type="hidden" name="id" value={art.id} />
-          <button className="px-4 py-2 rounded bg-black text-white">
-            다음 단계로(자동 생성)
-          </button>
-        </form>
+        <div className="flex gap-3 text-sm">
+          <Link className="underline" href={`/flow/${art.id}`}>Flow</Link>
+          <Link className="underline" href={`/preview/${art.id}`}>Preview</Link>
+        </div>
       </header>
 
-      <section className="grid gap-4">
-        <form action={actionUpdateArtifact} className="grid gap-3">
-          <input type="hidden" name="id" value={art.id} />
-
-          <label className="grid gap-1">
-            <span className="text-sm text-neutral-600">제목</span>
-            <input
-              name="title"
-              defaultValue={art.title}
-              className="border rounded px-3 py-2"
-            />
-          </label>
-
-          <label className="grid gap-1">
-            <span className="text-sm text-neutral-600">본문(마크다운)</span>
-            <textarea
-              name="bodyMarkdown"
-              defaultValue={art.bodyMarkdown}
-              className="border rounded px-3 py-2 font-mono min-h-[420px]"
-            />
-          </label>
-
-          <div>
-            <button className="px-4 py-2 rounded border">저장</button>
-          </div>
-        </form>
+      <section className="rounded-xl border bg-white shadow-sm p-4">
+        <pre className="whitespace-pre-wrap break-words text-sm">{art.bodyMarkdown}</pre>
       </section>
     </main>
   );
