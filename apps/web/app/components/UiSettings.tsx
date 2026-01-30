@@ -51,7 +51,11 @@ export function loadUiSettings(): UiSettings {
   }
 }
 
-export default function UiSettingsProvider() {
+export default function UiSettingsProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [settings, setSettings] = useState<UiSettings>(DEFAULTS);
 
   useEffect(() => {
@@ -72,6 +76,7 @@ export default function UiSettingsProvider() {
     <UiSettingsContext.Provider value={value}>
       <ThemeProvider mode={settings.theme} />
       <style>{`:root { --kanban-col-width: ${settings.columnWidth}px; }`}</style>
+      {children}
     </UiSettingsContext.Provider>
   );
 }
