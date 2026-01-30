@@ -208,6 +208,12 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
       return;
     }
 
+    // step 6~8: open preview in new browser tab (as agreed)
+    if (a.stage === "ready" || a.stage === "naver" || a.stage === "published") {
+      window.open(`/preview/${a.baseId}?stage=${a.stage}&view=auto`, "_blank", "noopener,noreferrer");
+      return;
+    }
+
     setModal({
       kind: "artifact",
       title: `${a.baseTitle}  (${a.stage})`,
@@ -527,7 +533,7 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
 
                             <form action={`/flow/${a.baseId}`}>
                               <Button variant="outline" size="sm" title="Flow 보기">
-                                ↗
+                                Flow
                               </Button>
                             </form>
                           </div>

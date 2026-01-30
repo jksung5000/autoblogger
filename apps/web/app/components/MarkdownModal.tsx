@@ -25,8 +25,8 @@ export function MarkdownModal(props: {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
+      <DialogContent className="w-[min(96vw,1100px)] h-[min(90vh,900px)] overflow-hidden p-0">
+        <DialogHeader className="p-4 pb-2 border-b">
           <div className="flex items-start justify-between gap-2">
             <DialogTitle className="pr-2">{props.title}</DialogTitle>
             <div className="flex gap-2">
@@ -48,17 +48,19 @@ export function MarkdownModal(props: {
           </div>
         </DialogHeader>
 
-        {mode === "preview" ? (
-          <div
-            className="md-preview max-w-none break-words"
-            style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
-        ) : (
-          <pre className="text-xs whitespace-pre-wrap break-words rounded-md border bg-muted p-3">
-            {props.markdown || ""}
-          </pre>
-        )}
+        <div className="px-4 pb-4 overflow-auto" style={{ maxHeight: "calc(90vh - 64px)" }}>
+          {mode === "preview" ? (
+            <div
+              className="md-preview max-w-none break-words"
+              style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
+          ) : (
+            <pre className="text-xs whitespace-pre-wrap break-words rounded-md border bg-muted p-3">
+              {props.markdown || ""}
+            </pre>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
