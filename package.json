@@ -1,0 +1,12 @@
+{
+  "name": "autoblogger",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.2",
+  "scripts": {
+    "dev": "pnpm -C apps/web dev",
+    "build": "pnpm -C apps/web build",
+    "start": "pnpm -C apps/web start",
+    "cli": "pnpm -C packages/cli cli"
+  }
+}

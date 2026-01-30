@@ -1,0 +1,11 @@
+{
+  "name": "@autoblogger/cli",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "cli": "node ./src/cli.js"
+  },
+  "dependencies": {
+    "@autoblogger/domain": "workspace:*"
+  }
+}
