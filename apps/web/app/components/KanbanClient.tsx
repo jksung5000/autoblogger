@@ -2,6 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { marked } from "marked";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
+import { Input } from "../../components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import { Separator } from "../../components/ui/separator";
 
 type Stage =
   | "topic"
@@ -179,108 +191,109 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <button
-            className="text-xs px-3 py-2 rounded border bg-white"
-            onClick={() => openPrompt("system")}
-            title="전역 시스템 프롬프트 보기"
-          >
-            System Prompt
-          </button>
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="검색(제목/본문)"
-            className="border rounded px-3 py-2 bg-white w-[260px]"
-          />
-          <select
-            value={seed}
-            onChange={(e) => setSeed(e.target.value as any)}
-            className="border rounded px-3 py-2 bg-white"
-          >
-            <option value="all">seed: all</option>
-            <option value="custom">custom</option>
-            <option value="tennis">tennis</option>
-            <option value="weights">weights</option>
-            <option value="cases">cases</option>
-          </select>
-          <select
-            value={sortKey}
-            onChange={(e) => setSortKey(e.target.value as any)}
-            className="border rounded px-3 py-2 bg-white"
-          >
-            <option value="updated">sort: updated</option>
-            <option value="created">sort: created</option>
-            <option value="title">sort: title</option>
-          </select>
-        </div>
+      <Card>
+        <CardHeader className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => openPrompt("system")}>
+                System Prompt
+              </Button>
+              <div className="text-sm text-muted-foreground">
+                cards: <b className="text-foreground">{filtered.length}</b>
+              </div>
+            </div>
 
-        <div className="text-sm text-neutral-600">
-          cards: <b>{filtered.length}</b>
-        </div>
-      </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="검색(제목/본문)"
+                className="w-[260px]"
+              />
 
-      <section className="flex gap-4 overflow-x-auto pb-2">
+              <Select value={seed} onValueChange={(v) => setSeed(v as any)}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="seed" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">seed: all</SelectItem>
+                  <SelectItem value="custom">custom</SelectItem>
+                  <SelectItem value="tennis">tennis</SelectItem>
+                  <SelectItem value="weights">weights</SelectItem>
+                  <SelectItem value="cases">cases</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={sortKey} onValueChange={(v) => setSortKey(v as any)}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="sort" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="updated">sort: updated</SelectItem>
+                  <SelectItem value="created">sort: created</SelectItem>
+                  <SelectItem value="title">sort: title</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <Separator />
+          <CardTitle className="text-base">Kanban</CardTitle>
+        </CardHeader>
+      </Card>
+
+      <section className="flex gap-4 overflow-x-auto pb-2" style={{ width: "100%" }}>
         {STAGES.map(({ stage, n, title, desc }) => {
           const c = stageColor(stage);
           const isCollapsed = !!collapsed[stage];
           const cards = grouped.get(stage) || [];
 
           return (
-            <div
+            <Card
               key={stage}
-              className={`min-w-[320px] max-w-[320px] border rounded bg-white ${c.border}`}
+              className={`${c.border}`}
+              style={{ minWidth: "var(--kanban-col-width)", maxWidth: "var(--kanban-col-width)" }}
             >
-              <div className={`p-3 border-b ${c.head} ${c.border}`}>
+              <CardHeader className={`border-b ${c.head} ${c.border} space-y-2`}>
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <div className="text-xs text-neutral-600">
-                      Step {n}
-                    </div>
-                    <h2 className="font-semibold">
-                      {title} <span className="text-xs text-neutral-500">({cards.length})</span>
-                    </h2>
-                    <p className="text-xs text-neutral-600 mt-1">{desc}</p>
+                    <div className="text-xs text-muted-foreground">Step {n}</div>
+                    <CardTitle className="text-base">
+                      {title} <span className="text-xs text-muted-foreground">({cards.length})</span>
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground mt-1">{desc}</p>
                   </div>
 
                   <div className="flex flex-col gap-2 items-end">
-                    <button
-                      className="text-xs px-2 py-1 rounded border bg-white"
-                      onClick={() => openPrompt(stage)}
-                      title="이 단계 프롬프트 보기"
-                    >
+                    <Button variant="outline" size="sm" onClick={() => openPrompt(stage)}>
                       Prompt
-                    </button>
-                    <button
-                      className="text-xs px-2 py-1 rounded border bg-white"
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() =>
                         setCollapsed((prev) => {
-                          // 좌우가 너무 길어서: 현재 컬럼 + 좌/우 컬럼만 남기고 나머지를 접는 "좌우 collapse"(focus) 모드
                           const focused = isFocusMode(prev);
                           const allCollapsedOrAllOpen =
                             STAGES.every((s) => !!prev[s.stage]) ||
                             STAGES.every((s) => !prev[s.stage]);
 
                           if (!focused && allCollapsedOrAllOpen) return focusAround(stage);
-                          // 이미 focus 모드면 다시 전체 펼치기
                           return expandAll();
                         })
                       }
                       title="좌우 collapse: 해당 컬럼과 좌/우만 남기고 접기 (토글)"
                     >
                       Focus
-                    </button>
+                    </Button>
                   </div>
                 </div>
-              </div>
+              </CardHeader>
 
               {isCollapsed ? (
-                <div className="p-3 text-sm text-neutral-500">(collapsed)</div>
+                <CardContent className="p-3 text-sm text-muted-foreground">(collapsed)</CardContent>
               ) : (
-                <div className="p-3 space-y-2">
+                <CardContent className="p-3 space-y-2">
                   {cards.length === 0 ? (
                     <p className="text-sm text-neutral-500">비어있음</p>
                   ) : null}
@@ -288,70 +301,65 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
                   {cards.map((a) => {
                     const isLooping = a.stage === "eval" && (a.evalScore ?? 0) < 70;
                     return (
-                      <div
+                      <Card
                         key={a.id}
-                        className={`border rounded p-3 bg-neutral-50 relative ${
-                          a.running ? "animate-pulse border-black" : "border-neutral-200"
+                        className={`bg-muted/40 relative ${
+                          a.running ? "animate-pulse ring-2 ring-primary" : ""
                         }`}
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <button
-                            className="font-medium text-left underline underline-offset-2"
-                            onClick={() => openArtifact(a)}
-                            title="팝업으로 보기"
-                          >
-                            {a.title}
-                          </button>
+                        <CardContent className="p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto font-medium text-left"
+                              onClick={() => openArtifact(a)}
+                              title="팝업으로 보기"
+                            >
+                              {a.title}
+                            </Button>
 
-                          <span className={`text-[11px] px-2 py-0.5 rounded ${c.tag}`}>
-                            {a.seedType}
-                          </span>
-                        </div>
-
-                        <div className="mt-2 flex items-center justify-between">
-                          <div className="text-[11px] text-neutral-600">
-                            {a.loopCount ? `loop:${a.loopCount}` : ""}
-                            {a.evalScore != null ? ` score:${a.evalScore}` : ""}
-                            {isLooping ? "  ↩︎ to topic" : ""}
+                            <Badge variant="secondary" className="text-[11px]">
+                              {a.seedType}
+                            </Badge>
                           </div>
 
-                          <div className="flex gap-2">
-                            <form action={`/artifact/${a.id}`}>
-                              <button className="text-xs px-2 py-1 rounded border" title="상세 페이지">
-                                ↗
-                              </button>
-                            </form>
+                          <div className="mt-2 flex items-center justify-between">
+                            <div className="text-[11px] text-muted-foreground">
+                              {a.loopCount ? `loop:${a.loopCount}` : ""}
+                              {a.evalScore != null ? ` score:${a.evalScore}` : ""}
+                              {isLooping ? "  ↩︎ to topic" : ""}
+                            </div>
+
+                            <div className="flex gap-2">
+                              <form action={`/artifact/${a.id}`}>
+                                <Button variant="outline" size="sm" title="상세 페이지">
+                                  ↗
+                                </Button>
+                              </form>
+                            </div>
                           </div>
-                        </div>
-                      </div>
+                        </CardContent>
+                      </Card>
                     );
                   })}
-                </div>
+                </CardContent>
               )}
-            </div>
+            </Card>
           );
         })}
       </section>
 
-      {modal ? (
-        <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center p-6"
-          onClick={() => setModal(null)}
-        >
+      <Dialog open={!!modal} onOpenChange={(open) => (!open ? setModal(null) : null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>{modal?.title}</DialogTitle>
+          </DialogHeader>
           <div
-            className="bg-white rounded shadow-lg w-full max-w-3xl max-h-[80vh] overflow-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-4 border-b flex items-center justify-between">
-              <div className="font-semibold">{modal.title}</div>
-              <button className="text-sm px-2 py-1 border rounded" onClick={() => setModal(null)}>
-                닫기
-              </button>
-            </div>
-            <div className="p-4 prose max-w-none" dangerouslySetInnerHTML={{ __html: modal.html }} />
-          </div>
-        </div>
-      ) : null}
+            className="prose max-w-none"
+            dangerouslySetInnerHTML={{ __html: modal?.html || "" }}
+          />
+        </DialogContent>
+      </Dialog>
 
       <div className="text-xs text-neutral-500">
         ※ loop/실시간 표현은 MVP 단계에서 “폴링 기반”으로 구현 중입니다(1초마다 상태 갱신).
