@@ -233,14 +233,28 @@ export async function runPipeline(id: string) {
   await writeExport(id, "naver_body.html", naver.bodyHtml);
   await writeExport(id, "hashtags.txt", naver.hashtags + "\n");
 
-  await updateArtifact(id, {
-    stage: "naver",
-    bodyMarkdown:
+  {
+    let naverMd =
       readyMd +
       `\n\n---\n` +
-      `(Naver export 생성됨)\n- exports/naver_full.html\n- exports/naver_body.html\n- exports/hashtags.txt\n`,
-  });
-  await sleep(120);
+      `(Naver export 생성됨)\n- exports/naver_full.html\n- exports/naver_body.html\n- exports/hashtags.txt\n`;
+
+    const g = evaluateStage("naver", naverMd);
+    naverMd = appendGateReport(naverMd, "naver", g.score, g.checks);
+
+    await updateArtifact(id, {
+      stage: "naver",
+      bodyMarkdown: naverMd,
+      stageScores: { naver: g.score },
+    });
+
+    await sleep(120);
+
+    if (g.score < 80) {
+      await updateArtifact(id, { running: false });
+      return;
+    }
+  }
 
   // Published (final)
   {

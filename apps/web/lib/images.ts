@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
-import { artifactDir } from "./artifactFiles";
+import { artifactDir, repoRoot } from "./artifactFiles";
 
 export type ImagePlaceholder = {
   query: string;
@@ -63,6 +63,36 @@ async function commonsSearch(query: string) {
   return title as string | null;
 }
 
+const LICENSE_ALLOW = [
+  "CC BY",
+  "CC BY-SA",
+  "CC0",
+  "Public domain",
+  "Public Domain",
+];
+
+function licenseAllowed(name: string) {
+  const n = String(name || "").toLowerCase();
+  return LICENSE_ALLOW.some((x) => n.includes(x.toLowerCase()));
+}
+
+async function readHistory(): Promise<string[]> {
+  const p = path.join(repoRoot(), "var", "state", "image_history.json");
+  try {
+    const raw = await fs.readFile(p, "utf-8");
+    const j = JSON.parse(raw);
+    return Array.isArray(j) ? j : [];
+  } catch {
+    return [];
+  }
+}
+
+async function writeHistory(list: string[]) {
+  const p = path.join(repoRoot(), "var", "state", "image_history.json");
+  await fs.mkdir(path.dirname(p), { recursive: true });
+  await fs.writeFile(p, JSON.stringify(list.slice(-500), null, 2), "utf-8");
+}
+
 async function commonsImageInfo(title: string) {
   const url =
     "https://commons.wikimedia.org/w/api.php?origin=*&format=json&action=query&prop=imageinfo&iiprop=url|extmetadata" +
@@ -75,6 +105,7 @@ async function commonsImageInfo(title: string) {
   if (!ii?.url) return null;
   const meta = ii.extmetadata || {};
   const license = meta.LicenseShortName?.value || meta.License?.value || "";
+  if (license && !licenseAllowed(String(license))) return null;
   const artist = meta.Artist?.value || "";
   const credit = meta.Credit?.value || "";
   const attributionUrl = meta.AttributionURL?.value || first?.canonicalurl || "";
@@ -92,6 +123,8 @@ export async function fetchImagesForDraft(params: { baseId: string; draftMd: str
   const placeholders = extractPlaceholders(params.draftMd);
   if (placeholders.length === 0) return { downloaded: [], creditsMd: "" };
 
+  const history = await readHistory();
+
   const outDir = path.join(artifactDir(params.baseId), "images");
   await fs.mkdir(outDir, { recursive: true });
 
@@ -105,6 +138,9 @@ export async function fetchImagesForDraft(params: { baseId: string; draftMd: str
     const info = await commonsImageInfo(title);
     if (!info) continue;
 
+    // global dedupe
+    if (history.includes(info.url)) continue;
+
     const ext = extFromUrl(info.url);
     const filename = `img_${String(i + 1).padStart(2, "0")}.${ext}`;
     const filePath = path.join(outDir, filename);
@@ -114,6 +150,7 @@ export async function fetchImagesForDraft(params: { baseId: string; draftMd: str
     await fs.writeFile(filePath, buf);
 
     downloaded.push({ file: `images/${filename}`, url: info.url, license: info.license || "" });
+    history.push(info.url);
 
     credits.push(
       `## ${filename}\n- Source: ${info.attributionUrl || title}\n- License: ${info.license || ""}\n- Author/Artist: ${info.artist || ""}\n- Retrieved: ${new Date().toISOString()}\n`
@@ -124,6 +161,8 @@ export async function fetchImagesForDraft(params: { baseId: string; draftMd: str
   if (creditsMd) {
     await fs.writeFile(path.join(outDir, "CREDITS.md"), creditsMd, "utf-8");
   }
+
+  await writeHistory(history);
 
   return { downloaded, creditsMd };
 }

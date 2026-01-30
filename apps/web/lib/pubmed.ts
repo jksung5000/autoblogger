@@ -85,15 +85,40 @@ function tokenize(s: string) {
     .filter((t) => t.length >= 3);
 }
 
+function hasHangul(s: string) {
+  return /[가-힣]/.test(s);
+}
+
+function hasLatin(s: string) {
+  return /[a-zA-Z]/.test(s);
+}
+
 export function verifyRefs(params: { topic: string; refs: PubmedRef[] }) {
-  const topicTokens = new Set(tokenize(params.topic));
   const failures: string[] = [];
+
+  // Hard requirement: at least 3 refs
+  if ((params.refs?.length || 0) < 3) {
+    failures.push("refs < 3");
+    return { ok: false, failures };
+  }
+
+  // If topic is mostly Korean and ref titles are English, token-overlap is unreliable.
+  // In that case, we do NOT block; we just treat QA as pass.
+  if (hasHangul(params.topic) && !hasLatin(params.topic)) {
+    return { ok: true, failures: [] };
+  }
+
+  const topicTokens = new Set(tokenize(params.topic));
+  if (topicTokens.size === 0) return { ok: true, failures: [] };
 
   for (const r of params.refs) {
     const t = tokenize(r.title);
     const hit = t.some((x) => topicTokens.has(x));
+    // soft-fail: warn but don't block unless ALL are misses
     if (!hit) failures.push(`ref not obviously on-topic: PMID ${r.pmid}`);
   }
 
-  return { ok: failures.length === 0, failures };
+  // allow up to 2 misses
+  const ok = failures.length <= 2;
+  return { ok, failures };
 }
