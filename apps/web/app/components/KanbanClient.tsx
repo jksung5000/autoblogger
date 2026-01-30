@@ -35,7 +35,12 @@ type SeedType = "tennis" | "weights" | "cases" | "custom";
 type Artifact = {
   id: string;
   stage: Stage;
-  title: string;
+
+  // display
+  baseTitle: string;
+  cardTitle: string;
+  snippet: string;
+
   seedType: SeedType;
   bodyMarkdown: string;
   updatedAt: string;
@@ -164,13 +169,13 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
     if (seed !== "all") list = list.filter((a) => a.seedType === seed);
     if (nq) {
       list = list.filter((a) =>
-        `${a.title}\n${a.bodyMarkdown}`.toLowerCase().includes(nq)
+        `${a.baseTitle}\n${a.bodyMarkdown}`.toLowerCase().includes(nq)
       );
     }
 
     const sorted = [...list];
     sorted.sort((a, b) => {
-      if (sortKey === "title") return a.title.localeCompare(b.title);
+      if (sortKey === "title") return a.baseTitle.localeCompare(b.baseTitle);
       return b.updatedAt.localeCompare(a.updatedAt);
     });
     return sorted;
@@ -204,7 +209,7 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
 
     setModal({
       kind: "artifact",
-      title: `${a.title}  (${a.stage})`,
+      title: `${a.baseTitle}  (${a.stage})`,
       html: marked.parse(a.bodyMarkdown || "") as string,
     });
   }
@@ -230,7 +235,7 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
 
     setModal({
       kind: "eval",
-      title: `${a.title} (Eval)` ,
+      title: `${a.baseTitle} (Eval)` ,
       html: marked.parse(md) as string,
     });
   }
@@ -459,14 +464,14 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
                         }`}
                       >
                         <CardContent className="p-3">
-                          <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start justify-between gap-2 min-w-0">
                             <Button
                               variant="link"
                               className="p-0 h-auto font-medium text-left"
                               onClick={() => openArtifact(a)}
                               title="팝업으로 보기"
                             >
-                              {a.title}
+                              <span className="truncate max-w-[190px] inline-block align-bottom">{a.baseTitle}</span>
                             </Button>
 
                             <Badge variant="secondary" className="text-[11px]">
@@ -474,7 +479,7 @@ export default function KanbanClient({ initial }: { initial: Artifact[] }) {
                             </Badge>
                           </div>
 
-                          <div className="mt-2 flex items-center justify-between">
+                          <div className="mt-2 flex items-center justify-between gap-2">
                             <div className="text-[11px] text-muted-foreground flex items-center gap-2">
                               {a.loopCount ? <span>{`loop:${a.loopCount}`}</span> : null}
                               {a.evalScore != null ? (

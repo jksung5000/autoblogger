@@ -8,7 +8,12 @@ export type KanbanCard = {
   // unique per stage card
   id: string;
   stage: Stage;
-  title: string;
+
+  // display
+  baseTitle: string;
+  cardTitle: string;
+  snippet: string;
+
   seedType: Artifact["seedType"];
   bodyMarkdown: string;
   updatedAt: string;
@@ -58,6 +63,38 @@ async function mtimeIso(p: string) {
   }
 }
 
+function firstMeaningfulLine(md: string) {
+  const lines = md.split(/\r?\n/).map((l) => l.trim());
+  for (const l of lines) {
+    if (!l) continue;
+    if (l.startsWith("#")) continue;
+    if (l.startsWith("-")) return l.replace(/^[-*]\s+/, "");
+    return l;
+  }
+  return "";
+}
+
+function stageLabel(stage: Stage) {
+  switch (stage) {
+    case "topic":
+      return "Topic";
+    case "outline":
+      return "Outline";
+    case "draft":
+      return "Draft";
+    case "review":
+      return "Review";
+    case "eval":
+      return "Eval";
+    case "ready":
+      return "Ready";
+    case "naver":
+      return "Naver";
+    case "published":
+      return "Published";
+  }
+}
+
 export async function artifactToStageCards(art: Artifact): Promise<KanbanCard[]> {
   const baseDir = artifactDir(art.id);
   const cards: KanbanCard[] = [];
@@ -67,11 +104,24 @@ export async function artifactToStageCards(art: Artifact): Promise<KanbanCard[]>
     const md = await readIfExists(p);
     if (!md) continue;
 
+    const label = stageLabel(stage);
+    const extra =
+      stage === "eval" && art.evalScore != null
+        ? ` · score ${art.evalScore}`
+        : stage === "draft" && art.loopCount
+          ? ` · v${art.loopCount}`
+          : "";
+
+    const snippetRaw = firstMeaningfulLine(md);
+    const snippet = snippetRaw.length > 120 ? snippetRaw.slice(0, 120) + "…" : snippetRaw;
+
     cards.push({
       baseId: art.id,
       id: `${art.id}:${stage}`,
       stage,
-      title: art.title,
+      baseTitle: art.title,
+      cardTitle: `${label}${extra}`,
+      snippet,
       seedType: art.seedType,
       bodyMarkdown: md,
       updatedAt: await mtimeIso(p),
