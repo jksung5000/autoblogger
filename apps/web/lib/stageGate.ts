@@ -42,6 +42,20 @@ export function evaluateStage(stage: Stage, md: string): { score: number; checks
     return { score, checks };
   }
 
+  if (stage === "review") {
+    const a = has(/Review Comments/, "reviewComments", "Review Comments 포함");
+    const score = a ? 100 : 60;
+    return { score, checks };
+  }
+
+  if (stage === "eval") {
+    const a = has(/- score:/, "score", "점수 라인");
+    const b = has(/### breakdown/, "breakdown", "breakdown 섹션");
+    const c = has(/### fixes/, "fixes", "fixes 섹션");
+    const score = [a, b, c].filter(Boolean).length * 34;
+    return { score: Math.min(100, score), checks };
+  }
+
   if (stage === "ready") {
     const a = has(/###\s+안내/, "notice", "안내 포함");
     const img = /!\[\]\((images\/img_\d+\.(jpg|jpeg|png|webp))\)/i.test(md);
@@ -50,6 +64,19 @@ export function evaluateStage(stage: Stage, md: string): { score: number; checks
     checks.push({ key: "refs", label: "PubMed 레퍼런스 3개", pass: refs >= 3, note: `count=${refs}` });
     const score = [a, img, refs >= 3].filter(Boolean).length * 34;
     return { score: Math.min(100, score), checks };
+  }
+
+  if (stage === "naver") {
+    const a = has(/exports\/naver_full\.html/, "full", "naver_full.html 생성 안내");
+    const b = has(/exports\/hashtags\.txt/, "tags", "hashtags.txt 생성 안내");
+    const score = [a, b].filter(Boolean).length * 50;
+    return { score, checks };
+  }
+
+  if (stage === "published") {
+    const a = has(/###\s+안내/, "notice", "안내 포함");
+    const score = a ? 100 : 70;
+    return { score, checks };
   }
 
   // default
