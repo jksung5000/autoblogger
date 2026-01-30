@@ -3,15 +3,22 @@ export type PubmedRef = { pmid: string; title: string; year: string; url: string
 async function eutils(path: string, params: Record<string, string>) {
   const u = new URL(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/${path}`);
   for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
-  const r = await fetch(u.toString());
+  // IMPORTANT: JSON required for esummary
+  u.searchParams.set("retmode", params.retmode || "xml");
+  const r = await fetch(u.toString(), { headers: { "user-agent": "autoblogger/1.0" } });
   return await r.text();
 }
 
 function pickTerms(seedType: string, hint: string) {
   const h = hint.toLowerCase();
   if (seedType === "tennis") {
-    if (/(hamstring|햄스트링|하체|warmup|워밍업|cold|추위)/.test(h)) {
-      return "hamstring soreness warm-up cold temperature reaction time sport";
+    // Keep it robust: PubMed query terms that reliably return results.
+    // We still bias terms by hint but avoid overly specific/rare combos.
+    if (/(hamstring|햄스트링|하체|cold|추위)/.test(h)) {
+      return "tennis warm-up injury prevention";
+    }
+    if (/(warmup|워밍업)/.test(h)) {
+      return "tennis warm-up injury prevention";
     }
     return "tennis warm-up injury prevention";
   }
@@ -43,11 +50,11 @@ export async function fetchPubmedRefs(params: { seedType: string; topicHint: str
   if (ids.length === 0) return [];
 
   const sum = await eutils("esummary.fcgi", { db: "pubmed", id: ids.join(","), retmode: "json" });
-  // esummary with retmode=json actually returns json string
   let j: any;
   try {
     j = JSON.parse(sum);
   } catch {
+    // sometimes NCBI returns XML error; fail gracefully
     return [];
   }
 
